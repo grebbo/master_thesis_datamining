@@ -1,0 +1,55 @@
+\subsection{Hadoop Cluster Deployment}
+After the virtualised cluster creation, Hadoop and other cluster services need to be installed. In order to do that, as a way to streamline a cluster installation, \href{https://hortonworks.com/products/data-platforms/hdp/}{\textbf{Hortonworks HDP 2.6.1} Hadoop distribution} has been chosen (with Hadoop 2.7.3, from Hortonworks repositories), rather than installing all of the Hadoop services one-by-one. When it comes to the cluster installation, HDP main feature is \textbf{Apache Ambari}\footnote{\href{https://ambari.apache.org/}{Apache Ambari} is a software for provisioning, managing, and monitoring Apache Hadoop clusters, providing an intuitive, easy-to-use Hadoop management web UI backed by its RESTful APIs.} and its Blueprint REST interface for a cluster installation which can be made through a single REST call. For this very reason, a script suite called \textbf{hw-install}\footnote{\href{https://github.com/fedexist/hw-install}{hw-install} is Python 2.7 script suite to automate an Hortonworks cluster installation} has been developed to take advantage of this functionality and automate the cluster preparation and configuration, before the actual deployment.
+
+\textbf{hw-install} is composed of two main packages: \texttt{hw\_install} and \texttt{\justify{hw\_add\_new\_host}}, while the first one handles the installation of an entire cluster given a proper configuration in YAML format, the second one handles the preparation of a new host to be added to an existing cluster via the Ambari Server UI.
+
+Both packages use the same core components for the preparation of cluster hosts:
+
+\begin{itemize}
+    \item Set-up of \textbf{passwordless SSH} communication between hosts with a common RSA key identifying the user executing \texttt{hw\_install}, by default and as recommended by Hortonworks Setup guide the user is \textbf{root};
+    \item Increasing of the number of \textbf{file descriptors} available in the system;
+    \item Installation of the \textbf{NTP} (Network Time Protocol) service, for hosts time synchronization;
+    \item Disabling of \textbf{firewall and SELinux}, in order to allow hosts to communicate freely between each other;
+    \item Set-up of \textbf{hostnames, FQDNs}\footnote{Fully Qualified Domain Name} \textbf{and DNSs};
+    \item Installation on the selected host of the \textbf{Ambari Server}, together with the Ambari Agents, on all of the hosts
+\end{itemize}
+
+In addition, \texttt{hw\_install} uses \textbf{Ambari Blueprint} interface, for the cluster deployment, passing the configuration file containing the needed services and their per-component configuration, if any (in absence of this per-component configuration, Ambari will apply default values), and then making a REST call to the Ambari Server which will take care of the installation of the needed components on the selected hosts.
+
+\pagebreak
+An example of a configuration file is:
+\\
+
+\begin{minted}[breaklines, breakafter="ambari/"]{YAML}
+cluster-name: cluster_name
+blueprint-name: blueprint_name
+ambari-repo: http://public-repo-1.hortonworks.com/ambari/centos7/2.x/updates/2.5.1.0/ambari.repo
+Blueprints: # HDP version to be installed
+    stack_name: HDP
+    stack_version: 2.6
+ambari-server: # Host where Ambari Server will be installed
+    IP: 192.168.1.1
+    FQDN: master.localdomain
+hosts: # Other hosts in the cluster
+    - IP: 192.168.1.2
+      FQDN: slave.localdomain
+host-groups:
+    - name: master
+    hosts: # Hosts belonging to the 'master' host group
+        - fqdn: master.localdomain
+    components: # Services to be installed in 'master' host group
+        - name: YARN_CLIENT
+        - name: HDFS_CLIENT
+        - name: HIVE_SERVER
+        - name: HIVE_METASTORE
+        - name: NAMENODE
+        - name: ZOOKEEPER_CLIENT
+        - name: RESOURCE_MANAGER
+        - name: WEBHCAT_SERVER
+        - name: ZOOKEEPER_SERVER
+        - name: AMBARI_SERVER
+.....
+\end{minted}
+\pagebreak
+
+Once a cluster has been installed, it's easy to add another host to the cluster, using \texttt{hw\_add\_new\_host}: after adding the appropriate \texttt{new-hosts} entries to the configuration file of the cluster, executing this script allows to set-up the host before manually adding it to the cluster from the Ambari Server UI, where it's possible to select the new services to be installed.

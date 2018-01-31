@@ -1,0 +1,26 @@
+\subsection{Deployed Software \& Versions}
+To sum up, the cluster has been provisioned with HDP 2.6.1, which includes:
+\begin{itemize}
+    \item Hadoop 2.7.3.2.6.1.0-129 (HDFS, YARN and MapReduce),
+    \item Tez 0.7.0,
+    \item Hive 1.2.1000, 
+    \item ZooKeeper 3.4.6,
+    \item Kafka 0.10.1,
+    \item Knox 0.12.0,
+    \item Ranger 0.7.0,
+    \item Spark 2.1.1,
+    \item NiFi 1.2.0,
+    \item Registry 0.3.0,
+    \item Slider 0.92.0.
+\end{itemize}
+
+In addition, it's been used Flink 1.4.0 for Scala 2.11 compiled from sources against hadoop 2.7.3.2.6.1.0-129 and Cassandra 3.11.
+\\
+\\
+The cluster is composed of seven machines:
+\begin{itemize}
+    \item \texttt{frontend}, with Knox and a Nginx reverse proxy installed, used as single point of entry for developers and cluster operators to access cluster services via SSH tunneling. Specifications: 1 core, 512 MB of RAM.
+    \item \texttt{master-1}, one of the two master components of the cluster, with an HDFS Namenode, a Zookeeper Server, a Registry MySQL database, a Kafka Broker, Hive Metastore and HiveServer 2 Interactive (support for Hive LLAP daemons), Ranger Admin and UserSync, a NiFi node and Spark2 History Server. Specifications: 4 core, 12 GB of RAM.
+    \item \texttt{master-2}, the other master component of the cluster, with the YARN Resource Manager and App Timeline Server, HDFS Secondary Namenode, a Zookeeper Server, a WebHCat Server and HiveServer2 for Hive, a Kafka Broker, a Nifi node, MapReduce2 History Server and Flink binaries. Specifications: 4 core, 12 GB of RAM.
+    \item Four slave machines, \texttt{slave-1}, \texttt{slave-2}, \texttt{slave-3}, \texttt{slave-4}, with a YARN Node Manager, HDFS DataNode and Cassandra nodes. Specifications: 4 core, 6 GB of RAM.
+\end{itemize}

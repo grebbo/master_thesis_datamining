@@ -1,0 +1,48 @@
+\chapter{Air Traffic monitoring: a use case}
+
+\section{Introduction}
+
+Air traffic monitoring can be considered a practical use case for the infrastructure described in the previous chapters, being characterised by the Big Data 3 Vs, as there are more than 5000 aircrafts flying any time (\textbf{Volume}), each one of which is transmitting data via transponder signals once every few seconds (\textbf{Velocity}) and, for each data source, data formats can be wildly different from one another, while, additionally, raw data transmitted by aircrafts can be used in conjunction with other kinds of data, such as weather and social networks, for deeper analytics (\textbf{Variety}).
+
+\section{Infrastructure overview}
+
+The infrastructure bones have been built with a series of Virtual Machines provisioned in the \textbf{Azure Pack Cloud-On-Premise} environment provided by the \textbf{VarGroup Data Center} located in Empoli (FI). There are, in total, seven VMs mounting CentOS 7 with the following specifications:
+\\    
+\begin{table}[!htb]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \# of VMs & CPUs & Memory & Storage & Hosts \\ \hline
+        1 & 1 & 512 MB & 40 GB & \texttt{frontend} \\ \hline
+        2 & 4 & 12 GB & 80 GB & \texttt{master-1}, \texttt{master-2} \\ \hline
+        4 & 4 & 6 GB & 100 GB & \texttt{slave-1}, \texttt{slave-2}, \texttt{slave-3}, \texttt{slave-4} \\ \hline  
+    \end{tabular}
+\end{table}
+
+All of these VMs are part of an \textbf{Hortonworks} cluster featuring HDP 2.6.1, deployed via Ambari Blueprint interface through an aptly made scripting suite to automate machine preparation. As additional software used, other than Hortonworks Hadoop distribution, which includes HDFS, YARN, Spark 2, Hive, Kafka, Zookeeper, Ranger, Knox and NiFi, \textbf{Flink 1.4} binaries have been compiled from sources targeting Hortonworks hadoop version and installed for usage on top of YARN, while a Cassandra cluster has been installed on the four slave nodes.
+
+The cluster has been made secure by the gatekeeping provided by Knox and the fact that access is only possible through the front-end machine and only via passwordless SSH by operators and developers. The front-end additionally implements iptables as firewall to prevent access to unwanted ports from external requests.
+
+\textbf{Note:} 10 additional VMs have been provisioned in the same environment for a MongoDB cluster, used as an additional data sink after Flink processing. Two additional distinct Windows Server 2012 machines have been provisioned to host the domain controller for the cluster and Tableau Server.
+
+\section{Deployment \& Operations}
+
+As mentioned, the virtualised cluster has been provisioned in a \href{https://www.microsoft.com/it-it/cloud-platform/windows-azure-pack}{Azure Pack Cloud-On-Premise} environment, which allows to automate the virtual machines' creation and management through \textbf{Azure Powershell} tools and its set of \textbf{cmdlets}\footnote{A \textit{cmdlet} is a lightweight command that is used in the Windows PowerShell environment within the context of automation scripts that are provided at the command line, executing an action and returning a Microsoft .NET Framework object to the next command in the pipeline.} to create, remove and, in general, manage Virtual Machines and their allocated resources.
+
+\input{Chapters/UseCase/HadoopClusterDeployment}
+
+\input{Chapters/UseCase/FlinkCassandraDeployment}
+
+\input{Chapters/UseCase/DeployedSoftware}
+\pagebreak
+\section{Development}
+
+\input{Chapters/UseCase/Ingestion}
+
+\input{Chapters/UseCase/Processing}
+
+\input{Chapters/UseCase/ServingSecurity}
+
+\input{Chapters/UseCase/AccessoryServices}
+
+\input{Chapters/UseCase/Visualisation}

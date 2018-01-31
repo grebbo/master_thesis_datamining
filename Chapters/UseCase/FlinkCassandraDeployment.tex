@@ -1,0 +1,4 @@
+\subsection{Flink \& Cassandra Deployment}
+For the current use case, it's been chosen to use Flink running on top of YARN, so that there's no need to set up a standalone Flink cluster with its own configuration. In order to use Flink, it's then necessary to download the sources of the needed version, 1.4.0 in this case, and compile it against the Hadoop version which was installed and selecting, if needed, the Scala version which is going to be used while developing the Flink applications.\\
+\\
+Cassandra deployment is rather straightforward, since, starting from a common \texttt{\justify{cassandra.yaml}} configuration file where all of the nodes have been noted as cluster \texttt{seeds}, it's possible, after importing its repository, to install it directly from CentOS package manager as a system daemon/service.

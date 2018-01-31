@@ -1,0 +1,143 @@
+\subsection{Accessory Services}
+
+While not strictly related to Big Data, the results we archive and process may be used for several different endeavours; we wanted to offer additional features for presentation, other than Visualisations, in the form of push notifications for mobile devices and REST APIs to access securely data in our databases.
+
+\subsubsection{Push Notifications}
+We have decided to send Push Notifications whenever a plane departs and is directed towards one of our airports of interest or whenever a plane is approaching its destination, descending below 37000 feet of altitude.
+\\
+To offer this service we have implemented a solution based on one of the many components of the Google Mobile Platform: \textbf{Firebase Cloud Messaging}.
+
+\paragraph{Firebase Cloud Messaging}
+
+Firebase Cloud Messaging (FCM) is a service for mobile and browser push notifications offered through a REST API listening on Google Firebase servers; the requests sent to this API are formatted in JSON specifying information on the message sent and on the receivers.
+What's more, the Firebase Server assigns to each device attached to our application a unique and expiring token to identify what devices will be receiving each notification.
+\\
+In more detail, FCM supports two different ways to send messages.
+
+\begin{itemize}
+	\item \textbf{Token based messaging}: The request for the notification includes a list of the tokens assigned to the recipient devices. 
+	\item \textbf{Topic based messaging}: The devices are required to subscribe to topics, requests are sent specifying the topic of which the notification is part of, so that subscribers can receive it.
+\end{itemize}  
+
+Seen that our topic in this case would have been airports, whose list is giant and ever growing, we have concluded that topic based messaging would be highly impractical and therefore chosen to use the token based solution and to handle the routing of notifications through a filtering application.
+
+\paragraph{Local Server}
+To handle users' data, filtering of notifications and the construction of requests to be forwarded to Firebase, we have implemented a middleware server using \textbf{NodeJS}, called \textit{Notifire}, listening on internal nodes, which offers a REST API customised for our needs.
+\\
+The server manages users' data, keeping a table on Hive representing the connection between Device Unique ID, Notifire Token and a list of airports the user is subscribed to. Changes to this table can be issued by the users through a request to the server, it is mandatory for the mobile application to send an update after obtaining a new token from Firebase, so that the table is always up to date.
+The table is also cached in memory for performance reasons.
+\\ \\
+As mentioned, the server offers a REST service to ingest notifications and forward it to Firebase. In more detail, the server expects a JSON containing information on a departing plane such as: airport of origin, airport of destination, type of aircraft, flight number and other spatial or temporal values.
+\\ \\
+For each received and accepted JSON, the server writes a list of tokens that are subscribed to the airport of destination and creates a message informing of the departure. It then creates a request with those data and send it to the Firebase server which in turn sends the actual notification to all target devices and responds back to our server with a report of the action.
+\pagebreak
+\subsubsection{REST APIs}
+As for REST APIs we have implemented two servers written in Python with the use of \textbf{Flask} library: \textit{Arnia}, offering a simple REST interface to write queries in SQL, and \textit{KhanUI}, a similarly easy to use REST API to query MongoDB through the use of PyMongo's own syntax.
+
+\paragraph{Arnia}
+
+Arnia accepts calls to its address in this form from within the cluster (Knox handles calls from outside in HTTPS converting them to the proper inner call and managing authentication of <user>): 
+
+\begin{code}
+	\begin{minted}[breaklines]{Bash}
+http://<host.inner.ip>:<arnia_port>/query?query=<query>&user.name=<user>
+	\end{minted}
+\end{code}
+
+To make this template a more comprehensible example:
+
+\begin{code}
+	\begin{minted}[breaklines, breakafter=&]{Bash}
+http://10.0.0.24:8888/query?query=SELECT+*+FROM+history_aggregated+limit+1&user.name=dummy_user
+	\end{minted}
+\end{code}
+
+The server would then respond with a JSON object representing the table output by the query; in particular for this example, provided dummy\_user has the required privileges to be allowed by Ranger, Arnia would return a list of records showing two flights, like this:
+\\
+\begin{code}
+	\begin{minted}{javascript}
+{Output: [{history_aggregated._id: TP1510-1, 
+        history_aggregated.aircraft: A320, 
+        history_aggregated.callsign: TAP1510, 
+        history_aggregated.date_arrival: 2017-10-12 04:35:08.0, 
+        history_aggregated.date_depart: 2017-10-12 00:46:27.0, 
+        history_aggregated.destination: LIS, 
+        history_aggregated.dt: 2017-10-12, 
+        history_aggregated.flight: TP1510, 
+        history_aggregated.origin: ABJ, 
+        history_aggregated.registration: CS-TNQ}]}
+	\end{minted}
+\end{code}
+
+\pagebreak
+The server's core part of the code to handle this calls is here presented.
+\\
+\begin{code}
+	\begin{minted}[breaklines]{Python}
+@app.route("/query", methods=['GET','POST'])  # routes GET and POST requests made to server_ip/query to the inner code
+    def query():
+    if request.method == 'POST':  # filters out GET requests
+        query = request.args.get("query")                # get query body from args
+        username = request.args.get("user.name")        # get username from args (this was authenticated by Knox and can be used for authorisation)
+
+        with pyhs2.connect( # connects to hive 2 interactive, to a specific database, in this case: air_traffic
+        	host='10.0.0.50',  # hive 2 ip        
+            port=10500, # hive 2 port            
+            authMechanism="PLAIN", # without ssl because knox already protects our perimeter
+            user=username, # we pass our username to authorisation
+            database='air_traffic') as conn:
+        
+        with conn.cursor() as cur:                
+            cur.execute(query)                                # executes query and saves results and metadata, the function itself prevents injection, while ranger prevents unauthorised users to modify the database
+            
+        output_dict = format(cur)
+
+        return json.dumps({'Output' : output_dict}, sort_keys=True, indent=4, default=json_util.default)    # returns query result
+	\end{minted}
+\end{code}
+
+\paragraph{KhanUI}
+
+Exactly in the same way as Arnia for Hive, KhanUI accepts queries written to a specific address and returns a JSON with the result from MongoDB, the only difference being in the syntax of the query language.
+As the core of the code has been already covered for Hive, we'll just bring another example of call and show its response.
+
+Let's say we want to find the average speed, in knots, for each type of aircraft. Following the PyMongo syntax that would be:
+
+\begin{code}
+	\begin{minted}[breaklines, breakafter=&]{Bash}
+db.active.aggregate([{$group:{_id:"$aircraft",speed:{"$avg":"$speed"}}}])
+	\end{minted}
+\end{code}
+
+Which in URL form with some encoding would translate to:
+
+\begin{code}
+	\begin{minted}[breaklines, breakafter=speed]{Bash}
+http://10.0.0.24:8889/query?query=db.active.aggregate%28%5B%7B%27%24group%27%3A%7B%27_id%27%3A%27%24aircraft%27%2C%27speed%27%3A%7B%27%24avg%27%3A%27%24speed%27%7D%7D%7D%5D%29&user.name=airtraffic
+	\end{minted}
+\end{code}
+
+And for which the response would be:
+
+\begin{code}
+	\begin{minted}{javascript}
+
+{
+    Output: [
+    {
+        _id: E75L, 
+        speed: 377.5
+    }, 
+    {
+        _id: BLCF, 
+        speed: 440.0
+    }, 
+    {
+        _id: E170, 
+        speed: 386.0
+    }
+    ]
+}
+	\end{minted}
+\end{code}
+\pagebreak
