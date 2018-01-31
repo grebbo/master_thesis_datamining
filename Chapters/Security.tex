@@ -1,67 +1,88 @@
 \chapter{Security}
 
-As the main goal of our whole architecture is to extract information and actionable insights from data, there needs to be a tight security customized to our infrastructure in order to protect that valuable data.
-To protect the data we use several layers of security, some seen commonly in other systems, some peculiar to our stack.
+Dal momento che i dati che trattiamo e ricaviamo dall'analisi hanno rilevanza conoscitiva e valore in termini di mercato e ricerca, risulta fondamentale considerare un ambiente sicuro in cui accogliere tali informazioni. Tale perimetro deve però garantire, contemporaneamente alla discrezione relativamente all'accesso del dato, un livello sufficiente di astrazione dalla generica interazione esterna, permettendo un massimo controllo sull'interezza del sistema.
+
+\begin{figure}
+	\centering
+	\includegraphics[scale=0.4]{Figures/security_diagram.png}
+	\decoRule
+	\caption[Infrastructural Stack]{Struttura del perimetro di sicurezza}
+	\label{fig:security_diagram}
+\end{figure}
+La struttura progettata risulta, dunque, articolata su due livelli:
+\begin{itemize}
+	\item frontend, che si occupa dell'interazione dell'utente con i servizi forniti dal cluster;
+	\item cluster, ossia i nodi sottostanti, che garantiscono un livello di sicurezza più specifico per ogni servizio interpellato.
+\end{itemize}
+Il primo problema da porsi nello sviluppo di una struttura di sicurezza risulta essere la definizione delle entità che possono interagire con il sistema e in quale misura tali interazioni avvengono, in modo da fornire una soluzione adatta sia in termini di confidenzialità per le parti che per facilità d'uso.
 \newline
-Firstly, access to the cluster internal network must be denied to every outside request but for few selected ports on a front end machine, this is obtained through standard ACLs.
-The only connections available to both Clients and Developers must be through secure channels (HTTPS\footnote{HTTPS: HyperText Transfer Protocol over Secure Socket Layer, standard protocol for secure web pages}, SSH\footnote{SSH: Secure SHell, protocol for remote controls of Command Line Interfaces}, FTPS\footnote{FTPS: File Transfer Protocol over Secure Socket Layer, self explanatory}).
+Parliamo, quindi, di:
+\begin{itemize}
+	\item operatori tecnici: sviluppatori o amministratori del sistema, che necessitano di accessi più profondi e possono lavorare all'interno della rete aziendale.
+	\item utenti esterni: clienti o personale generico, che necessitano di utilizzare i servizi del cluster, senza possibilità di modificarne la struttura.
+	\item sorgenti dati: data streams esterni, inviano dati su cui si lavorerà con gli strumenti presenti nel cluster.
+\end{itemize}
+Per ciascun utente si sono considerati approcci differenti, commisurati alle esigenze. 
+Le richieste avvengono su un ristretto numero di porte abilitate alla comunicazione con l'esterno e viaggiano su canali sicuri, tramite l'utilizzo di protocolli quali HTTPS, SSH e FTPS.
 \newline
-Secondly, the author of the request that passed through ACL must be authenticated by an authentication provider such as LDAP\footnote{LDAP: Lightweight Directory Access Protocol, a standard protocol  for accessing distributed directory information services over an intranet} or Kerberos, and then authorised to follow through with its request with respect to its identity.
+In un secondo momento le chiamate vengono autenticate tramite provider dedicati come LDAP o Kerberos, per poi essere sottoposte ad un controllo di autorizzazione, atto a verificare che la richiesta sia congrua ai diritti dell'utente.
 \newline
-Thirdly, a service must provide Auditing for all requests, whether denied or allowed so that actions and their consequences can be attributed to their authors.
+L'esito di ciascun passaggio viene registrato da un servizio di auditing, che permette di tenere traccia delle richieste e degli accessi al sistema, in modo da identificare eventuali abusi o tentativi di forzatura del sistema.
 
 \pagebreak
 
 \section{Knox}
 
-\textbf{Apache Knox} \cite{knox_doc} is an Application Gateway, part of the Hadoop environment, that offers several security functionalities for a Hadoop Cluster right after the first layer provided by the ACL and acts as a Reverse Proxy with policy enforcement.
-\subsection{Authentication and Acces Control}
-The Knox gateway exposes a single secure access point for all REST\footnote{REST: REpresentational State Transfer, a type of stateless software architecture whose aim is to provide access to resource in an interoperable way through the web} APIs and HTTP interactions with the cluster.\newline
-All client requests to RESTful APIs and webUIs are sent to Knox through HTTPS with their respective user credentials, Knox authenticates the user with the help of an authentication provider such as Kerberos or LDAP, then thanks to an authorisation provider offers Access Control to the single services, if access is allowed, the request is routed to the target service.
-Failed authentication, failed authorisation and successful requests are all logged, providing a first layer of Auditing.
+Apache Knox è un Application Gateway, componente della suite di strumenti Hadoop, che fornisce varie funzionalità in termini di sicurezza per clusters Hadoop, specialmente se coadiuvato da altri elementi.
+\newline
+Nella struttura in esame riveste il ruolo fondamentale di "Reverse Proxying" dei servizi offerti dal cluster e di autenticazione e "Access Control".
+\subsection{Reverse Proxying}
+Il gateway Knox fornisce un servizio di mascheramento che permette di definire un URL da mostrare all'utente esterno corrispondente a ciascuna chiamata rivolta al cluster. In questo modo è possibile distinguere interfaccia e implementazione del servizio, mantenendo confidenziale la struttura dell'architettura sottostante e garantendo la modularità del sistema.
+\newline
+Ogni servizio che necessiti di Knox deve essere dichiarato all'interno di uno specifico file di topologia. La topologia è un file XML che dichiara le componenti associate a Knox, quali provider di autenticazione e autorizzazione, e i servizi gestiti dal file in esame.
+A questo vengono accompagnati due file di definizione del servizio:
+\begin{itemize}
+	\item service.xml, che definisce la struttura della chiamata che verrà associata al servizio interessato;
+	\item rewrite.xml, che definisce tramite regex la politica di riscrittura che deve essere seguita, prima che la chiamata venga inoltrata al cluster.
+\end{itemize}
+Le chiamate che possono essere fatte tramite Knox seguono i dettami del protocollo REST, riportando indirizzo, topologia e servizio richiesto nell'URL sottoposto.
+% procedimento di reverse proxying ???
 \pagebreak
 
-\subsection{Structure}
-The two main components of Knox are the Topology files and the services' files.
-\newline
-The Topology is an XML file representing a gateway, it is divided in two main sections: the gateway/provider section and the service section; the former section is comprised of the configuration settings enforced by the gateway while providing access to the Hadoop cluster, these settings describe the services that fulfil various roles such as the Authentication provider, the Federation or Single Sign-On provider, the Authorisation provider and the Hostmap which maps external to internal node hostnames.
-The service section provides a list of services accessible from the gateway and the address in the cluster where they can be found.
-\newline
-For each service listed in the Topology, two files are needed: 
-\begin{itemize}
-	\item service.xml, which defines the high level URL patterns to be exposed by the gateway for that service, such as the shape of the incoming request to be matched.
-	\item rewrite.xml, which defines regular expression through which the request must be rewritten before being sent to the cluster internal service.
-\end{itemize}
-Knox comes packaged with several files for common Hadoop services and permits the definition of custom ones. 
+\subsection{Autenticazione e Access Control}
+Il gateway Knox si presenta come unico access point sicuro per le interazioni con il cluster, che siano esse tramite API REST che attraverso chiamate HTTP/HTTPS. Ogni richiesta viene inoltrata previa sottomissione di credenziali. Queste vengono autenticate da Knox tramite il provider dichiarato dalla topologia selezionata, LDAP o Kerberos.
+Successivamente la chiamata autenticata viene sottoposta all'entità specificata per l'autorizzazione che garantisce controllo sugli accessi ai servizi del sistema.
+Infine, una volta garantita la bontà della richiesta, viene sottoposta al servizio per l'esecuzione.
+\pagebreak
 
 \section{Ranger}
 
-\textbf{Apache Ranger} \cite{ranger_doc} is a comprehensive framework to manage data security, authorisation, data governance and audit in Hadoop clusters.
-
-Ranger provides a centralised security administration able to manage in one place most of the security related tasks inside the cluster, with a high granularity thanks to its customization for Hadoop services.
-
-Plain authentication is accepted, and can be used if a previous layer has already authenticated the user (such as Knox), otherwise Ranger supports LDAP and Unix Authentication.
-
-\subsection{Authorisation}
-A request coming from within the cluster to a service for which Ranger is enabled, provided previous authentication, must be authorised by Ranger according to precise policies specific to the service.
-
-Ranger supports several plugins for the major services containing critical data, such as HDFS, HBase, Hive and YARN plus a selection of other services that process or ingest data and interact with the former four.
-\newline Authorization can be granted through policies to certain groups or users to services altogether (access-authorization) or to specific resources inside them (resource-classification).
+Apache Ranger \cite{ranger_doc} è un framework che si occupa di definire e gestire la sicurezza del dato all'interno di un cluster Hadoop. Questo avviene tramite l'utilizzo di un sistema di autorizzazione specifico per ogni servizio presente nel cluster che centralizza le logiche di autorizzazione per le varie risorse del sistema. La gestione di Ranger può avvenire sia tramite interfaccia grafica web, sia tramite chiamate REST al nodo su cui risiede il framework. Infine, garantisce una profonda conoscenza per quanto riguarda le interazioni con il cluster, tramite un servizio di audit che osserva le operazioni effettuate in tempo reale e le registra su HDFS o Solr.
 \newline
-To exemplify the granularity provided by Ranger, here's presented an image depicting a policy on Hive that allows only \textbf{SELECT} requests from a restricted group on certain rows of a specific table in a database.
 
-\begin{figure}
-	\centering
-	\includegraphics[scale=0.4]{Figures/policy.png}
-	\decoRule
-	\caption[Infrastructural Stack]{A Ranger policy for Hive}
-	\label{fig:Policy}
-\end{figure}
+\subsection{Autorizzazione}
 
-\subsection{Tag Based Policies and Persistence}
-
-New versions of Ranger support a new type of Policy based on Tags; Tags can be associated with single resources inside other services, providing those resources the same kind of policy without having to specify it, this makes it easier to separate access-authorization and resource-classification and to manage the latter.\newline
-Tags and related information are stored in the Tag Store, while a TagSync process is responsible for synchronisation with other services using Tags such as Apache Atlas.
+Nel momento in cui una richiesta a un servizio del cluster viene autenticata dal provider scelto, deve essere sottoposta al controllo di Ranger, per verificare i privilegi dell'utente nei confronti della risorsa richiesta. È possibile gestire il processo di autorizzazione su due livelli differenti: discriminando rispetto caratteristiche di chi effettua l'accesso o a che unità di lavoro appartiene (access authorization) o relativamente alla risorsa richiesta (resource authorization).
+\newline 
+All'interno di tali approcci possiamo riconoscere ulteriori distinzioni. Relativamente al controllo degli accessi degli utenti:
+\begin{itemize}
+	\item Role based (RBAC), che valuta l'accesso in base a criteri di ruolo e privilegi dell'utente;
+	\item Attribute based (ABAC), una specializzazione del RBAC, che considera nella valutazione anche attributi aggiuntivi, come indirizzo IP, luogo di login o dati dell'utente.
+\end{itemize}
+Per quanto riguarda,invece, l'accesso alle risorse, essendo un framework rivolto all'utilizzo in un ambiente Hadoop, Ranger mette a disposizione alcuni plugin per interagire direttamente con i principali servizi presenti nella suite, garantendo un controllo più specifico e profondo riguardo quali operazioni l'utente possa e non possa fare. I plugin sono programmi in Java incapsulati in processi del servizio di riferimento che si occupano di caricare le regole da un server centrale e memorizzarle localmente in un file. Tra i servizi riconosciuti troviamo:
+\begin{itemize}
+	\item HDFS
+	\item HBase
+	\item Hive
+	\item Yarn
+\end{itemize}
+Ad esempio, per quanto riguarda Hive, le regole di autorizzazione permettono di specificare per ogni regola quali operatori è possibile utilizzare nelle query al database, chi può effettuarle e a quali campi può avere accesso.
+%immagine policy
 \newline
-Policies and users are stored in a MySQL database on one of the hosts' file system, a synchronisation process is designated with managing users between Ranger, Ambari and other security services such as LDAP/Active Directory.\newline
-Auditing of all accesses are stored on HDFS directly or through Apache Solr, a fast search engine.
+
+\subsection{Regole "Tag Based" e persistenza dei dati}
+
+Versioni più recenti di Ranger hanno introdotto la possibilità di utilizzare regole di sicurezza basate su etichette. Queste vengono attribuite a varie risorse dai vari servizi in modo da definire lo stesso tipo di regola per entità differenti senza doverlo definire esplicitamente, rendendo più semplice le operazioni di controllo degli accessi e di gestione delle risorse. Le etichette e la loro definizione sono tenute in un "Tag Store", mentre un processo di sincronizzazione TagSync si occupa di mantenere le informazioni sempre aggiornate tra i servizi che ne fanno uso.
+\newline
+Tutte i dati relativi alla logica di sicurezza sono memorizzati in locale, in uno database MySQL su uno degli hosts, che mantiene tutte le informazioni relative a regole e utenti previsti dal framework. La coerenza del sistema viene garntita da un processo di sincronizzazione dedicato che aggiorna le liste di utenti, gruppi e ruoli con LDAP/Active Directory e le opzioni di configurazione con Ambari.
+\newline
