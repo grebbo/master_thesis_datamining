@@ -1,11 +1,11 @@
-\chapter{Data Processing}
+\chapter{Elaborazione Dati}
 
-Data Processing is the layer immediately following the Data Quality: once data have been formatted and cleansed, adapted then to our needs, we can start analysing and processing them using adequate frameworks, in order to extract from, transform and enrich them for visualization purposes.\\
+Una volta che il dato è stato memorizzato, strutturato in maniera conforme al tipo di operazione cui sarà soggetto e pulito è il momento che venga utilizzato attivamente.\\
+Questo avviene tramite analisi e elaborazioni operate con il supporto di molteplici framework di sviluppo, aventi come fine ultimo l'estrazione di ulteriori informazioni e la trasformazione di ciò che si è ottenuto finora. Solo in questo modo potranno emergere ulteriori aspetti e \textit{insights}, che verranno visualizzate secondo i dettami della Data Visualization.\\
 
-\section{Data Processing Techniques}
+\section{Le Tecniche}
 
 \subsection{Batch Processing} \label{BatchProc}
-
 Batch data processing is the most classical data processing mode and is characterised by the delayed execution and the simultaneous processing of data in chunks (batches) loaded from a dataset.
 \\
 \newline
@@ -71,29 +71,57 @@ A MapReduce job usually involves six steps:
 
  \pagebreak
  
-\section{Spark} \label{Spark}
+\section{Apache Spark} \label{Spark}
 
-\href{https://spark.apache.org/}{\textbf{Apache Spark}} \cite{spark_doc} is an open source distributed computational framework originally developed at Berkeley and now maintained by the Apache Software Foundation.
-\\
-Conceived as a general multiplatform engine, Spark can run in a standalone cluster, on YARN or on Apache Mesos\footnote{\href{https://mesos.apache.org/}{Mesos} is a distributed cluster manager used to manage datacenters with a master-slave architecture. It's a lower level abstraction with respect to YARN and thus performs a different job more inclined towards machines management and task scheduling, than purely job's scheduling.}. It can access data from standard File Systems, from HDFS or any distributed database and can be used for Batch Processing, Graph Processing (thanks to GraphX plugin) or Stream Processing.
-\\
-\\
-The problem that sparked its creation was MapReduce's inefficiency in applications that use the same working set of data on multiple parallel operations, among which are included: iterative machine learning algorithms and interactive data analysis tools \cite{Zaharia:2010:SCC:1863103.1863113}; Spark's aim is to support such applications while providing scalability and fault tolerance.
-\\
-In order to do that, Spark uses a typical architecture with a \textbf{Driver Program} that runs the developer application's main() and executes parallel tasks on the cluster through its main abstraction: Resilient Distributed Dataset (RDD).
+Apache Spark è un framework open source per il calcolo distribuito in tempo reale, nato a Berkeley nel 2009 e successivamente passato sotto l'ala della Apache Software Foundation, che si occupa tuttora del suo mantenimento.\\ Grazie alle sue caratteristiche ha un ampio spettro di applicazioni, dal Batch Processing al Graph Processing e Stream Processing.
+\subsection{Requisiti} 
+Il framework richiede un'ambiente che lo supporti nell'interazione con il resto dell'architettura: un gestore di cluster e un sistema di archiviazione distribuita.\\ 
+Per quanto riguarda il primo sono supportati Hadoop YARN o Apache Mesos, in aggiunta ai quali è possibile adottare l'opzione \textit{standalone}, consigliata solo con obiettivi di testing, in cui è Spark che avvia il singolo nodo su cui eseguire l'applicazione. In ogni caso il framework è completamente astratto da questo aspetto, unificando l'approccio per ogni scelta adottata.\\
+Per il secondo punto il framework richiede uno tra cui i principali rappresentanti della categoria, tra i quali i già citati HDFS o Cassandra.\\ 
 
-\subsection{Resilient Distributed Dataset}
-An RDD is a collection of elements partitioned across a cluster's nodes in a fault tolerant way that can be processed in parallel, persisted in memory to be used iteratively and efficiently by parallel operations; an RDD is usually instantiated from an input file loaded from HDFS or any other distributed database; operations are then applied on it through classical Map, Filter and Reduce functions, producing a graph with the execution planned called \textbf{lineage}, from which an RDD can be reinstated to its proper state even after failure.
-Beside these features RDD also has the following traits:
+\subsection{Architettura}
+Spark adotta un'architettura distribuita di tipo "Master Slave": un task \textit{Driver} e molteplici tasks \textit{Worker}.\\ 
+Il programma \textit{Driver} viene eseguito sul nodo principale e gestisce la divisione delle operazioni sugli altri nodi tramite l'oggetto \textit{SparkContext}. Questo interagisce con il gestore del cluster del sistema per definire job \textit{Executors} nei nodi secondari. A questi vengono successivamente inviati il codice dell'applicazione e i task particolari da eseguire.\\
+I programmi \textit{Worker} vengono avviati sui nodi secondari e rimangono in esecuzione per tutta la durata dell'applicazione. È importante sottolineare che ogni applicazione genera processi indipendenti dalle altre, garantendone l'isolazione reciproca per lo scheduling. Tuttavia ciò significa che l'unico modo per far comunicare applicazioni in esecuzione contemporanea consiste nella scrittura su memoria esterna.\\
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[scale=0.75]{Figures/spark_architecture.png}
+	\decoRule
+	\caption[Architettura Spark]{Architettura Master Slave}
+	\label{fig:Architettura Spark}
+\end{figure}
+
+\subsection{Caratteristiche}
+Spark si pone nel panorama del Data Processing come principale concorrente ad Hadoop MapReduce. Infatti, contrariamente alla controparte, fornisce l'opzione per lo Stream Processing e punta sull'analisi in tempo reale.\\
+Per fare ciò l'architettura utilizza primitive "in-memory", lavorando direttamente in RAM laddove possibile. Questo approccio riduce di molto i tempi di latenza, rimuovendo l'overhead della scrittura su disco. Proprio per queste caratteristiche Spark viene preferito per algoritmi di apprendimento automatico e analisi dati interattiva, che richiedono accesso ripetuto agli stessi dati. \newline
+<grafico prestazioni mapreduce vs spark>
+
+\subsection{Struttura}
+Il framework è organizzato su due livelli di librerie. Quello fondamentale è costituito da SparkCore, che fornisce i metodi e strutture dati principali e su cui poggiano le estensioni più specifiche:
 \begin{itemize}
-	\item In-Memory, data inside RDD is stored for as long and as much as possible in memory (RAM), as opposed to the disk-oriented methods of MapReduce.
-	\item Immutable, RDDs do not change once created, and can only be transformed through the instantiation of a new RDD.
-	\item Lazily evaluated, data inside RDD is not available nor transformed until an action is executed that requires access to those data.
-	\item Cacheable, data can be held in a persistent storage like memory or, worse comes to worst, disk.
-	\item Parallel, RDD process data in parallel.
-	\item Typed, RDD records have types such as Int or String.
-	\item Partitioned, records are partitioned and distributed across several nodes.
+	\item SparkSQL
+	\item Spark Streaming
+	\item MLlib (Machine Learning Library)
+	\item GraphX
+\end{itemize}  
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[scale=0.75]{Figures/spark_structure.png}
+	\decoRule
+	\caption[Struttura Spark]{Struttura Spark}
+	\label{fig:Struttura Spark}
+\end{figure}
+
+\subsubsection{SparkCore e RDD}
+SparkCore costituisce le fondamenta dell'intero framework. Garantisce la distribuzione dei task, lo scheduling e funzionalità di input e output di base. Tutte questo orbita intorno all'astrazione fornita dai RDD (Resilient Distributed Dataset), una struttura dati immutabile, tipata e distribuita sui nodi del cluster. Questa utilizza una politica di "fault tolerance" basata sul mantenimento delle operazioni che hanno interessato il singolo RDD, in modo che esso possa essere ricostruito in caso di criticità a partire da queste informazioni. \newline
+Coerentemente con la filosofia del framework, gli RDD lavorano "in-memory" per quanto possibile e, se necessario, vengono persistiti in memoria o su disco. Essi rispondono al paradigma "Trasformazione/Azione" per ottimizzare l'esecuzione delle operazioni: 
+\begin{itemize}
+	\item Trasformazioni, le operazioni che cambiano la forma in qualche modo del RDD (per esempio Map, Filter) e valutate in maniera "lazy", ossia effettuate solo nel momento in cui un'Azione prende atto
+	\item Azioni, le operazioni che accedono al RDD per restituire un risultato tipato
 \end{itemize}
+L'accesso ai metodi della libreria SparkCore viene fornito tramite la classe SparkContext, tramite cui è possibile creare RDD a partire da dati in locale o su HDFS.
 
 \subsection{Extensions}
 \subsubsection{GraphX}
