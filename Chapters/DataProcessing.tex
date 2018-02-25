@@ -76,7 +76,7 @@ A MapReduce job usually involves six steps:
 Apache Spark è un framework open source per il calcolo distribuito in tempo reale, nato a Berkeley nel 2009 e successivamente passato sotto l'ala della Apache Software Foundation, che si occupa tuttora del suo mantenimento.\\ Grazie alle sue caratteristiche ha un ampio spettro di applicazioni, dal Batch Processing al Graph Processing e Stream Processing.
 \subsection{Requisiti} 
 Il framework richiede un'ambiente che lo supporti nell'interazione con il resto dell'architettura: un gestore di cluster e un sistema di archiviazione distribuita.\\ 
-Per quanto riguarda il primo sono supportati Hadoop YARN o Apache Mesos, in aggiunta ai quali è possibile adottare l'opzione \textit{standalone}, consigliata solo con obiettivi di testing, in cui è Spark che avvia il singolo nodo su cui eseguire l'applicazione. In ogni caso il framework è completamente astratto da questo aspetto, unificando l'approccio per ogni scelta adottata.\\
+Per quanto riguarda il primo sono supportati Hadoop YARN o Apache Mesos, in aggiunta ai quali è possibile adottare l'opzione \textit{standalone}, consigliata solo con obiettivi di testing, in cui è Spark che avvia i nodi su cui eseguire l'applicazione. In ogni caso il framework è completamente astratto da questo aspetto, unificando l'approccio per ogni scelta adottata.\\
 Per il secondo punto il framework richiede uno tra cui i principali rappresentanti della categoria, tra i quali i già citati HDFS o Cassandra.\\ 
 
 \subsection{Architettura}
@@ -95,15 +95,16 @@ I programmi \textit{Worker} vengono avviati sui nodi secondari e rimangono in es
 \subsection{Caratteristiche}
 Spark si pone nel panorama del Data Processing come principale concorrente ad Hadoop MapReduce. Infatti, contrariamente alla controparte, fornisce l'opzione per lo Stream Processing e punta sull'analisi in tempo reale.\\
 Per fare ciò l'architettura utilizza primitive "in-memory", lavorando direttamente in RAM laddove possibile. Questo approccio riduce di molto i tempi di latenza, rimuovendo l'overhead della scrittura su disco. Proprio per queste caratteristiche Spark viene preferito per algoritmi di apprendimento automatico e analisi dati interattiva, che richiedono accesso ripetuto agli stessi dati. \newline
+
 <grafico prestazioni mapreduce vs spark>
 
 \subsection{Struttura}
-Il framework è organizzato su due livelli di librerie. Quello fondamentale è costituito da SparkCore, che fornisce i metodi e strutture dati principali e su cui poggiano le estensioni più specifiche:
+Spark è organizzato su due livelli di librerie: uno fondamentale costituito da Spark Core e uno composto dalle estensioni incluse nativamente. Tra le principali in questa situazione riconosciamo:
 \begin{itemize}
-	\item SparkSQL
-	\item Spark Streaming
-	\item MLlib (Machine Learning Library)
-	\item GraphX
+	\item SparkSQL, per l'interazione con dati strutturati
+	\item Spark Streaming, orientata allo Stream Processing
+	\item MLlib, che fornisce algoritmi di Machine Learning
+	\item GraphX, adottata per il Graph Processing
 \end{itemize}  
 
 \begin{figure}[h]
@@ -114,34 +115,50 @@ Il framework è organizzato su due livelli di librerie. Quello fondamentale è c
 	\label{fig:Struttura Spark}
 \end{figure}
 
-\subsubsection{SparkCore e RDD}
-SparkCore costituisce le fondamenta dell'intero framework. Garantisce la distribuzione dei task, lo scheduling e funzionalità di input e output di base. Tutte questo orbita intorno all'astrazione fornita dai RDD (Resilient Distributed Dataset), una struttura dati immutabile, tipata e distribuita sui nodi del cluster. Questa utilizza una politica di "fault tolerance" basata sul mantenimento delle operazioni che hanno interessato il singolo RDD, in modo che esso possa essere ricostruito in caso di criticità a partire da queste informazioni. \newline
-Coerentemente con la filosofia del framework, gli RDD lavorano "in-memory" per quanto possibile e, se necessario, vengono persistiti in memoria o su disco. Essi rispondono al paradigma "Trasformazione/Azione" per ottimizzare l'esecuzione delle operazioni: 
-\begin{itemize}
-	\item Trasformazioni, le operazioni che cambiano la forma in qualche modo del RDD (per esempio Map, Filter) e valutate in maniera "lazy", ossia effettuate solo nel momento in cui un'Azione prende atto
-	\item Azioni, le operazioni che accedono al RDD per restituire un risultato tipato
-\end{itemize}
-L'accesso ai metodi della libreria SparkCore viene fornito tramite la classe SparkContext, tramite cui è possibile creare RDD a partire da dati in locale o su HDFS.
+\subsubsection{Spark Core}
+Spark Core costituisce le fondamenta dell'intero framework, fornendo metodi di base relativi a scheduling e I/O. Tuttavia tra le componenti principali abbiamo il sopracitato oggetto \textit{SparkContext}, che comunica a Spark come interagire con la struttura del cluster.\\
+\begin{code}
+	\label{code:SparkContext}
+	\begin{minted}[breaklines, breakbefore=., breakafter=(]{Scala}
+	val conf = new SparkConf().setAppName(appName).setMaster("yarn")
+	val spark = new SparkContext(conf) 
+	\end{minted}
+\end{code}~\\
+È importante ricordare che ogni applicazione può avere solo un oggetto SparkContext attivo alla volta e, pertanto, bisogna ricorrere al metodo \textit{stop()}, qualora ci fosse la necessità di cambiarlo.\\
 
-\subsection{Extensions}
+\paragraph{RDD} Gli RDDs (Resilient Distributed Datasets) sono collezioni di dati immutabili, tipate e distribuite che costituiscono la struttura dati caratteristica di Apache Spark, su cui si basano le ulteriori astrazioni che vengono applicate dalle librerie specifiche (Dataframes, Datasets).\\
+Vengono generati a partire da riferimenti ad un sistema di memorizzazione esterno (es. HDFS) o "parallelizzando" una struttura dati già inizializzata nel programma. In questo modo il dato viene suddiviso in base alla struttura distribuita del cluster in partizioni logiche.\\
+Supportano due tipi di operazioni: 
+\begin{itemize}
+	\item Trasformazioni, che generano un nuovo RDD che andrà a prendere il posto di quello precedente. Questo perché i RDD sono immutabili in modo da garantire un sistema robusto ai potenziali problemi dovuti all'aggiornamento di risorse parallele. Sono definite "lazy", ossia il risultato non viene calcolato fino a quando non risulta necessario, in modo da evitare inutili sprechi di risorse e ottimizzare l'ordine delle operazioni laddove possibile. Ne sono esempi \textit{map}, \textit{filter} o \textit{join}.
+	\item Azioni, le operazioni che accedono al RDD per restituire un risultato tipato. Sono coloro che innescano l'esecuzione delle trasformazioni. Ne sono esempi \textit{reduce}, \textit{collect} e \textit{count}. 
+\end{itemize}
+Laddove possibile trasformazioni e azioni vengono effettuate direttamente in memoria, che viene liberata una volta che l'operazione è terminata. Questo garantisce prestazioni decisamente maggiori rispetto ai frameworks che lavorano "on-disk", rimuovendo i pesanti tempi di accesso necessari a interrogare il disco. Tuttavia talvolta può essere richiesto una persistenza del dato in memoria, in modo da rendere le future operazioni su quella risorsa più veloci; questo viene ottenuto tramite i metodi \textit{persist} e \textit{caching}, specificando il livello di memorizzazione necessario (es. MEMORY\_ONLY,DISK\_ONLY). Questa soluzione viene adoperata in particolare per algoritmi iterativi o interrogazioni rapide del dato, in quanto rende le future operazioni sulla risorsa fino a dieci volte più veloci.\\
+I RDD godono infine di una politica di "fault tolerance" basata sul concetto di "lineage": viene mantenuta la cronologia delle operazioni  che hanno portato allo stato attuale sottoforma di DAG (Direct Acyclic Graph) e, in caso di errore del sistema, le partizioni vengono ricomputate per ripristinare lo stato corrente. Questo è possibile poiché il meccanismo di partizionamento è un processo deterministico, dunque riproducibile ripercorrendo la storia della risorsa. \newline
+
+\subsection{Estensioni}
 \subsubsection{GraphX}
 
-GraphX is a Spark extension for graphs and graph analysis. GraphX extends RDD adding a Graph abstraction implemented as a directed multigraph with properties attached to both vertices and edges and exposes typical graph operators, while also providing an optimized variant of the Pregel API.
-
+GraphX è un'estensione di Spark per grafi e analisi su di essi. Poggiando sulle Spark Core APIs, GraphX estende i suoi concetti, utilizzando come astrazione di base l'oggetto "Property Graph" derivato dal RDD e mette a disposizione operatori proprietari e operatori ottimizzati derivati dalle API Pregel.
 \paragraph{Property Graph}
-
-The Graph abstraction, or property graph is a directed multigraph with properties attached to each vertex and edge, defined by the developer. A directed multigraph is defined as a directed graph where more than one edge can connect two nodes, as two nodes might have multiple relationships with different properties, (e.g. Annie and Barb are both colleagues and friends). \\ \\
-Property graphs, like RDDs, are immutable and to transform them a new one must be instantiated from the former through an operation, they are distributed across executors using vertex partitioning heuristics and are fault-tolerant, thanks to the same lineage mechanism seen in RDDs.
-
-\paragraph{Graph Operations}
-
-Graphs implement several operators that can be divided in three classes:
-
+L'entità Property Graph, o solo Graph, è un multigrafo, cioè un grafo con molteplici rami paralleli con vertici in comune, diretto con proprietà definite per ogni ramo e vertice, semplificando la descrizione di relazioni multiple tra coppie di nodi. GraphX riesce a ottimizzare le risorse per la memorizzazione del grafo relativamente al tipo di dato presente al suo interno, utilizzando tipologie diverse di array specializzati.\\
+Derivano dai RDDs, i Property Graph condividono con essi tutte le caratteristiche di base già viste: 
 \begin{itemize}
-	\item \textbf{Property Operators}: the Graph equivalent to RDD map, with the difference that you can choose to map over the vertices, the edges, or the \texttt{<source node, edge, destination node>} triplets , to modify the properties of said components.
-	\item \textbf{Structural Operators}: acting on the topology of the graph, an example would be reverse which, from a Graph, returns a new Graph where all edges' directions are reversed.
-	\item \textbf{Join Operators}: used to join properties from different graphs or from external collections like RDDs.
+	\item immutabili, cambiamenti ai valori di un grafo implicano la creazione di uno nuovo che ne prenderà il posto. Per ottimizzare il processo vengono esclusi dalla ricomputazione tutti quei campi non interessati dalla trasformazione.
+	\item distribuiti, sono partizionati tra i processi di esecuzione utilizzando alcune tecniche di partizionamento di vertici.
+	\item fault-tolerance, mantengono lo stesso archetipo in materia, utilizzando il concetto di "lineage" per ricreare il grafo nel caso di errori di sistema.
 \end{itemize}
+Tale legame con il concetto di RDD si riflette nella struttura effettiva del Property Graph, che contiene come attributi due oggetti di tipo VertexRDD e EdgeRDD, versioni ottimizzate per vertici e rami della struttura dati.
+
+\paragraph{Operatori}
+In aggiunta all'oggetto Graph, il framework mette a disposizione una serie di operatori di base per applicare trasformazioni e azioni ai grafi. Questi sono riuniti sotto la classe \textit{GraphOps}, ma, se si sta utilizzando la versione in Scala del framework, sono disponibili direttamente come metodi del grafo tramite il meccanismo degli \textit{implicits}. Tra le principali famiglie riconosciamo:
+\begin{itemize}
+	\item \textbf{Operatori di proprietà}; equivalenti del \textit{map} del RDD, sono versioni specifiche e ottimizzate per operare su rami, vertici o le terne definite da "origine - ramo - destinazione", per considerare ogni istanza di una relazione.
+	\item \textbf{Operatori strutturali}; operano sulla topologia strutturale del grafo, ad esempio \textit{reverse} o \textit{mask}.
+	\item \textbf{Operatori di join}; consentono di estendere il grafo con dati provenienti da altri grafi o strutture dati esterne (es. RDD).
+\end{itemize}
+
+\subsection{Spark SQL}
 
 
 \subsubsection{SparkStreaming}
@@ -158,11 +175,19 @@ As for RDDs, DStreams can be instantiated from a stream source like Kafka, Flume
 Internally a continuous stream of data, DStream splits the live flow into mini batches which are then sent to the Spark engine that can then process them as batches and output them to processed batches as previously seen.
 
 \subsubsection{MLlib}
+La libreria MLLib o Machine Learning Library è un estensione di APIs per Spark che fornisce molteplici strumenti e algoritmi per il Machine Learning, con l'obbiettivo di rendere tale approccio semplice e scalabile su grandi moli di dati, sfruttando il paradigma "in-memory" fornito da Apache Spark.\\
+Sebbene esistano due tipologie di APIs, una basata su RDD e l'altra su Dataframe, è sempre più idea comune considerare le seconde come approccio principale, se non unico, alla libreria, data la maggiore semplicità di utilizzo e possibilità di ottimizzazione.
+\paragraph{Gli strumenti} MLLib mette a disposizione una pletora di classi e metodi da affiancare agli algoritmi di analisi. Si tratta di classi che spaziano dalla manipolazione e pulizia del dato per adattarlo alla forma richiesta all'ottimizzazione degli iperparametri del modello scelto.
+\subparagraph{ML Pipeline}
+Permettono di definire le fasi dell'analisi che vogliamo effettuare, raccogliendo i vari passaggi in un'unica sequenza, i \textit{PipelineStages}. In questo modo siamo certi che tutte le operazioni vengano effettuate sul dato, riducendo lo spazio ad errori di sorta.\\
+I passaggi possono essere \textit{Transformers}, che trasformano il Dataframe in un altro (es. modificando o aggiungendo colonne), o \textit{Estimators}, astrazione che racchiude tutti gli algoritmi di apprendimento. Mentre gli oggetti \textit{Transformers} implementano solo il metodo \textit{transform()}, usato per applicare l'operazione specificata al dato, gli oggetti di tipo \textit{Estimators} hanno anche un metodo \textit{fit()}, necessario a effettuare il training sui dati specificati e generare il corrispondente modello e diventando un \textit{Transformer}.\\ 
+La Pipeline stessa è un \textit{Estimator} e necessita, dunque, di entrambe le operazioni. Una volta definiti gli stages viene chiamato il metodo \textit{fit()}, che viene applicato secondo l'ordine specificato a tutti gli \textit{Estimators} presenti tra gli stages. Viene così generato un \textit{PipelineModel} (o \textit{Fitted Pipeline}), che a questo punto rappresenta una raccolta di soli oggetti \textit{Transformers}. Infine il metodo \textit{transform()} viene applicato su ogni stage sequenzialmente, applicando il modello complessivo al dato considerato.
+\subparagraph{CrossValidator}
+\subparagraph{FeatureTransformers}
 
-Machine Learning Library, or \textbf{MLlib} for short is a set of APIs for Spark that exposes several tools for Machine Learning, using Spark as a backend taking advantage of Spark's efficiency in iterative algorithms.
+\paragraph{Gli algoritmi}
 
-MLlib exposes a selection of Machine Learning algorithms for classification, regression, creation of decision trees and random forest, recommendation, clustering, topic modelling and pattern mining.
-It also offers other tools to transform features, to handle datasets and hyperparameters and to make computation with distributed linear algebra and statistics.
+\subparagraph{RandomForest}
 
 \pagebreak
 \section{Flink}\label{Flink}
