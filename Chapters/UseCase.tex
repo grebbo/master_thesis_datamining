@@ -1,0 +1,86 @@
+\chapter{Prevedere i Ritardi Aerei: un caso d'uso}
+
+\section{Introduzione}
+
+\pagebreak
+
+\section{L'Infrastruttura}
+
+\subsection{Hardware}
+
+\pagebreak
+
+\subsection{Data Management \& Access}
+\subsubsection{HDFS}
+Hadoop Distributed File System (\textbf{HDFS}) \cite{hadoop_doc} è uno dei principali file system distribuiti del settore, grazie alla sua scalabilità con cui garantisce elevate prestazioni e facilità di utilizzo anche su clusters di grandi dimensioni.
+
+\paragraph{Architettura}
+HDFS segue la struttura \textbf{master-slave}, con due livelli di componenti che interagiscono tra loro:
+\begin{itemize}
+	\item \textbf{NameNode}: ricopre il ruolo del \textit{master}, occupandosi della gestione del namespace del filesystem e del controllo degli accessi ai dati da parte dei vari clients. Espone un'interfaccia organizzata secondo la classica gerarchia a cartelle, mantenendo metadati riguardo al contenuto e la struttura, e si occupa di organizzare la distribuzione dei blocchi di dato nei vari DataNodes.
+	
+	\item \textbf{DataNodes}: sono gli \textit{slaves}, che effettuano le operazioni di lettura e scrittura insieme a operazioni di base sui blocchi di dato, tutte ordinate dal NameNode. 
+\end{itemize}
+
+\paragraph{Fault Tolerance}
+
+L'utilizzo di un cluster composto da più dispositivi comporta un aumento consistente nel rischio di perdita dei dati: un qualunque guasto può avere ripercussioni su altre componenti che dipendono da esso. Per questo è ancora più rilevante avere una politica affidabile di reazione a tali inconvenienti.\\
+HDFS gestisce questa eventualità in prima istanza prevenendo situazioni critiche: quando un file viene salvato il NameNode non ordina una sola scrittura di esso, ma più blocchi vengono scritti su molteplici DataNodes, relativamente al corrispondente parametro di ridondanza \textbf{Replication Factor}. In questo modo il dato risulta sempre disponibile anche nella sfortunata evenienza di un malfunzionamento.\\
+Questo criterio, in congiunzione con i metadati salvati per ogni operazione, permette di ripristinare la situazione anche nel caso di errore dello stesso HDFS. Ogni modifica e lo stato attuale del filesystem sono costantemente mantenuti rispettivamente nel \textbf{EditLog} e \textbf{FsImage}, entità che vengono adoperate al riavvio del NameNode per effettuare nuovamente le recenti operazioni.
+
+\subsubsection{YARN} 
+Yet Another Resource Negotiator \cite{yarn_doc} (\textbf{YARN}) è il sistema operativo distribuito della suite Hadoop. Riveste il ruolo di gestore delle applicazioni distribuite che vengono eseguite sul cluster: si occupa dell'affidamento delle risorse e dello scheduling dei jobs.
+
+\paragraph{Architettura}
+La struttura di YARN è articolata su due \textit{daemons}:
+\begin{itemize}
+	\item \textbf{Resource Manager}: supportato dai \textbf{Node Managers}, rappresenta il framework di elaborazione sui dati e scheduler. Si occupa di distribuire le risorse per i vari jobs ai nodi, dove il controllo passa al singolo Node Manager della macchina. Questo di assicura di attribuire a ciascuna applicazione il proprio \textit{container}, in modo da isolarne l'ambiente di esecuzione, e fare rapporto al Resource Manager dell'utilizzo delle risorse del nodo.
+	
+	\item \textbf{Application Master}: si occupa della richiesta di risorse per la singola applicazione cui è legato al Resource Manager. Quando viene lanciato un'applicazione, che consiste in un job o in un DAG di job, il relativo Application Master ottiene un container per l'esecuzione iniziale. Da questo momento l'AM interagisce con il relativo Node Manager, condividendo con esso le informazioni di avanzamento del processo e lo stato del container.
+\end{itemize}
+
+\subsubsection{Hive}
+
+\pagebreak
+
+\subsection{Data Ingestion}
+
+\subsubsection{Kafka}
+
+\pagebreak
+
+\subsection{Data Visualisation}
+
+\subsubsection{Tableau}
+
+\pagebreak
+
+\subsection{Servizi Accessori}
+
+\subsubsection{REST APIs}
+
+\paragraph{Arnia}
+
+\paragraph{KhanUI}
+
+\subsubsection{Push Notification}
+
+\paragraph{NotiFire}
+
+\pagebreak
+
+\section{Dal Dato alla Previsione}
+
+\subsection{Apprendimento}
+
+\pagebreak
+
+\subsection{Previsione}
+
+\pagebreak
+
+\subsection{Analisi dei Risultati}
+
+\pagebreak
+
+\section{Sicurezza}

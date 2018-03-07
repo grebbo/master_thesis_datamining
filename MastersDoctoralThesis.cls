@@ -338,16 +338,16 @@ KOMA-script documentation for details.}]{fancyhdr}
 
 \DeclareDocumentCommand{\abstractauthorfont}{}{}
 \DeclareDocumentCommand{\abstracttitlefont}{}{}
-\newcommand{\byname}{by}
+\newcommand{\byname}{a cura di}
 \newcommand{\abstractname}{Abstract}
 \providecaptionname{german,ngerman,austrian,naustrian}{\byname}{von}
-\providecaptionname{american,australian,british,canadian,english,newzealand,UKenglish,USenglish}{\byname}{by}
+\providecaptionname{american,australian,british,canadian,english,newzealand,UKenglish,USenglish}{\byname}{a cura di}
 \ifbool{consistentlayout}{
 	\DeclareDocumentEnvironment{abstract}{ O{} }{%
 		\addchap*{\abstractname}%
 		{\chapteralign\normalsize\abstractauthorfont \authorname \par} % Author name
 		\vspace{\baselineskip}
-		{\chapteralign\parbox{.7\linewidth}{\chapteralign\normalsize\itshape\abstracttitlefont\@title}\par}% Thesis title
+		{\chapteralign\parbox{.5\linewidth}{\chapteralign\normalsize\itshape\abstracttitlefont\@title}\par}% Thesis title
 		\bigskip\noindent\ignorespaces
 	}%
 	{}%end alt-abstract

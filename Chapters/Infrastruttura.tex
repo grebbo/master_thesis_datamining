@@ -1,0 +1,75 @@
+\chapter{Un Sistema Big Data}
+Ovviamente ad un paradigma di lavoro così diverso da quello della gestione dati classica, deve corrispondere un ambiente di lavoro commisurato, che fornisca tecnologie e strumenti adatti ai carichi di lavoro richiesti. Risulta dunque necessario un sistema che segua il dato lungo tutto il suo ciclo vitale.
+
+\section{Data Lifecycle}
+Come detto precedentemente, al giorno d'oggi le sorgenti di dati cui attingere sono molteplici e eterogenee. È utile, dunque, adottare una struttura che uniformi il dato, astraendosi dalla sua particolare natura, in modo da poterlo trattare opportunamente tramite alcuni passi successivi. Non si tratta di uno schema lineare, poiché ogni fase può influenzare e essere influenzata dalle altre ad ogni livello.
+
+\subsection{Raccolta} 
+Una volta definito il tipo di progetto e gli obiettivi da raggiungere, bisogna cominciare con l'acquisizione del dato. Solitamente in questa fase le sorgenti cui si attinge sono molteplici e di diverse varietà, più o meno strutturati:
+\begin{itemize}
+	\item \textbf{Human generated}: social network e siti web
+    \item \textbf{Machine generated}: sensori GPS, RFID o dispositivi vari (meteorologici, medicali)
+    \item \textbf{Business generated}: dati generati internamente da un'azienda
+\end{itemize}
+Questi dati devono dunque essere memorizzati in un formato utile per i futuri utilizzi e sono soggetti, dunque, a operazioni di \textit{pre-processing}.
+
+\subsection{Elaborazione}
+Ottenuto un dataset è cruciale comprenderne la struttura e le caratteristiche tramite un'analisi esplorativa. Solo a questo punto si può procedere con la modellazione e l'analisi, che permettono di ricavare la conoscenza intrinseca del dato: entrano, quindi, in gioco le tecniche di Machine Learning e Data Mining.
+	
+\subsection{Risultati e decisioni}
+Il risultato della previa analisi viene esaminato e studiato per ottenere gli spunti e le risposte al problema iniziale. Questo porterà ad una serie di decisioni conseguenti, che, auspicabilmente, offriranno ulteriori spunti di ricerca per riniziare il ciclo.
+
+\pagebreak
+
+\section{L'Infrastruttura}
+Formalizzato il ciclo vitale tipico di un sistema Big Data resta da determinare quale sia la struttura che accoglierà il dato effettivamente e quali strumenti debbano essere impiegati per lavorare su una mole di informazioni tanto consistente.\\
+Quel che ne risulta è un'architettura a livelli \cite{Marz:2015:BDP:2717065}, in cui ciascuno è indipendente dagli altri, in modo da garantire una completa astrazione in termini di implementazioni e tecnologie adottate. I parametri che deve rispettare sono: 
+\begin{itemize}
+	\item \textbf{Scalabile}: adatta a memorizzare e lavorare su quantità di dati variabili
+	\item \textbf{Affidabile}: ridondante e sicura
+	\item \textbf{Estensibile}: pronta ad essere estesa con nuovi componenti
+	\item \textbf{Versatile}: adatta a rispondere a varie tipologie di problemi del settore
+\end{itemize}
+
+\subsection{Hardware}
+Alla base dell'intera struttura abbiamo l'hardware, reale o virtualizzato che sia. Per ottenere la potenza di calcolo necessaria e mantenere contenuti i costi viene utilizzata un'architettura distribuita su più macchine che operano in parallelo e collegate tra loro.\\ 
+Ciò che ne risulta viene definito \textbf{cluster} e permette di trattare questo insieme di macchine come una singola, garantendo prestazioni e affidabilità.
+
+\subsection{Data Management}
+Una volta stabilita la struttura fisica di base bisogna fare in modo che tale architettura risulti trasparente ai livelli soprastanti. Questo è il ruolo dello strato di Data Management, che funge da interfaccia per le applicazioni che utilizzano il cluster, in modo che vedano il tutto come una singola entità.\\
+Risultano necessarie tre componenti fondamentali:
+
+\subsubsection{Filesystem distribuito} 
+Ricopre le stesse funzioni di un classico filesystem, ma applicate su di una rete informatica, quale quella del cluster. Oltre alla gestione di files e risorse deve garantire una politica di \textit{fault tolerance}, in grado di prevenire e gestire le situazioni di errore grazie alla molteplice replicazione dei dati immagazzinati sulle differenti macchine.	
+
+\subsubsection{Sistema operativo distribuito} 
+In aggiunta allo strato fornito dai sistemi operativi delle singole macchine, serve qualcosa che ne gestisca le risorse e i processi come se fossero un singolo dispositivo. Nasce così quello che viene chiamato \textbf{Single System Image}, che unifica, tra gli altri, i punti di interazione del cluster con l'esterno e lo scheduling dei jobs.	
+
+\subsubsection{Database distribuito}
+Altro approccio di gestione del dato parallelo al filesystem specificato precedentemente. Viene adoperata la struttura più classica basata su transazioni per avere accesso rapido ai dati presenti nel cluster tramite un linguaggio di querying. Esistono tecnologie differenti a seconda che il dato da memorizzare sia strutturato o meno ed è fondamentale scegliere l'approccio più adatto al caso in esame.
+
+\subsection{Data Ingestion}
+Rappresenta il modulo che si occupa dell'introduzione dei dati nel cluster. Come già discusso in precedenza, le varietà in cui il dato si può presentare sono molteplici e avere un componente che riesca a trattare ogni caso è fondamentale. L'\textit{ingestion} può avvenire in due modalità, a seconda della tipologia di sorgente dati:
+\begin{itemize}
+	\item \textbf{Batch}: il dato viene discretizzato in vari blocchi che vengono introdotti uno alla volta a opportuni intervalli di tempo.
+	\item \textbf{Real Time}: o in \textbf{streaming}, prende il dato allo stesso ritmo con cui lo invia la sorgente, senza tempi di latenza.	
+\end{itemize}
+Talvolta già in questo passo vengono operate elaborazioni minori del dato per prepararlo alla memorizzazione o a analisi immediate, effettuate in tempo reale o senza l'utilizzo del disco.
+
+\subsection{Data Quality}
+Il dato, una volta portato all'interno del cluster, deve essere preparato per l'analisi. Non sempre la forma in cui ci si presenta è adatta a lavorarci ed è, dunque, necessario manipolarlo. Tra le caratteristiche richieste riconosciamo: 
+\begin{itemize}
+	\item completezza
+	\item accuratezza
+	\item coerenza
+	\item disponibilità
+\end{itemize}
+
+\subsection{Data Processing}
+È questo il livello che si occupa dell'analisi del dato e di applicare i modelli ad esso. Sono presenti differenti tipologie di analisi (batch, stream, graph) a seconda della tipologia e velocità di elaborazione richiesta.\\
+
+
+\subsection{Data Visualization}
+Visualizzare e comprendere propriamente il dato è importante quanto il risultato dell'analisi stessa. È il punto in cui le pratiche relative all'analisi dati e i principi della comunicazione si incontrano: infatti, un'opportuna presentazione può valorizzare ulteriormente il lavoro fatto e questo è il fine che si vuole raggiungere con gli strumenti di questo livello.\\
+La rilevanza ricoperta da tale livello deriva dalla difficoltà che gli esseri umani hanno solitamente nel relazionarsi con dati grezzi, richiedendo un'ulteriore pulizia e semplificazione che direzioni l'attenzione dove più necessario.\\
+Questo avviene solitamente tramite la rappresentazione del dato utilizzando modelli visivi e grafici, ma ogni strumento che aiuti la fruizione dell'informazione ottenuta può essere annoverato sotto questa definizione.

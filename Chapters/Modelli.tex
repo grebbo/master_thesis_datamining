@@ -1,0 +1,77 @@
+\chapter{L'Analisi Predittiva}
+Nel campo dell'analisi dati è cruciale la definizione del tipo di problema che si vuole affrontare e delle modalità con cui ci rivolgeremo ad esso. L'utilizzo di un corretto approccio è uno dei fattori più importanti e influenti sulla bontà dell'analisi stessa e una scelta accurata può sia facilitare il lavoro, sia mostrare risvolti che con altrimenti sarebbero passati inosservati.\\\\
+Come già menzionato in precedenza, l'analisi predittiva \cite{pred_analytics} è l'approccio che più gode delle potenzialità offerte da un ambiente Big Data. Esso rientra nella categoria dei problemi di \textbf{apprendimento supervisionato}.
+\newline
+In questa tipologia di problemi il sistema viene precedentemente istruito, durante la fase di \textit{training}, riguardo la natura e struttura del dato, a partire da un insieme di elementi forniti a priori. Viene quindi definita una funzione che descriva il comportamento descritto dal dataset, grazie alla quale potrà, a partire da un insieme di variabili opportune, dette \textit{features}, restituire il valore della variabile desiderata, o \textit{label}.\\\\
+A seconda della tipologia di variabile possiamo distinguere diversi metodi per affrontare il problema:
+\begin{itemize}
+	\item \textbf{Classificazione}: qualora il dato sia categorico, ovvero discretizzato in classi. In questo caso un errore risulta più pesante, in quanto le classi sono mutuamente esclusive e non abbiamo misure intermedie.
+	
+	\item \textbf{Regressione}: nel caso in cui il dominio del dato sia continuo. Si introduce un criterio di ordine tra i differenti valori e la distanza tra essi può essere valutata come errore di predizione in maniera più flessibile. 
+\end{itemize}
+Un ulteriore grado di distinzione si può avere relativamente alla tipologia di modello che intediamo adottare e al grado di osservabilità che ha il processo di analisi:
+\begin{itemize}
+	\item \textbf{Black box}: rientrano nella categoria i modelli per cui non è possibile osservare le fasi intermedie del processo che genera il risultato. Viene fornito un input \textit{X} ad esso e viene generata un output \textit{Y}.
+	
+	\item \textbf{White box}: diversamente dalla loro controparte, permettono di osservare gli stadi intermedi, garantendo una maggiore comprensione del processo di analisi e delle condizioni da cui si è ottenuto il risultato ottenuto.
+\end{itemize}
+
+\pagebreak
+
+\section{Decision Trees}
+Gli alberi decisionali sono un modello di tipo \textit{white box}. Questa loro caratteristica implica una particolare applicazione in casi in cui è preferibile avere informazioni riguardo le ragioni che hanno portato a un certo risultato, piuttosto che una maggiore affidabilità di quest'ultimo. Sono, per esempio, richiesti in medicina, laddove garantiscono maggiori informazioni rispetto al semplice errore di predizione.\\
+Oltre a questo comportano altri vantaggi:
+\begin{itemize}
+	\item \textbf{Flessibilità}: possono lavorare sia su una vasta gamma di dataset con soddisfacenti risultati. 
+	\item \textbf{Semplicità}: la loro struttura è intrinsecamente di facile lettura, permettendo una rapida analisi anche a livelli superficiali.
+	\item \textbf{Adattabilità}: sono utilizzabili sia su variabili di tipo categorico che numerico.
+\end{itemize}
+
+\subsection{Struttura}
+La struttura utilizzata è quella classica di un albero, composta da nodi e rami. Più in particolare possiamo riconoscere:
+\begin{itemize}
+	\item \textbf{Radice}: ovvero il nodo di partenza che rappresenta il grado minore di separazione del dato.
+	\item \textbf{Nodi intermedi}: sono le partizioni parziali che vengono effettuate sul dataset, in relazione ai risultati dei test logici applicati ai dati.
+	\item \textbf{Rami}: rappresentano i differenti esiti dei test logici e conducono ai nodi del livello sottostante dell'albero.
+	\item \textbf{Nodi foglia}: sono le estremità dell'albero, ovvero il livello di separazione massima del dataset.
+\end{itemize}
+
+\subsection{Funzionamento}
+Partendo dal dataset di partenza, rappresentato dal nodo radice, vengono ad ogni passo ottenute ulteriori ramificazioni applicando opportuni criteri di partizionamento. Questi sono definiti a partire dalle variabili di input, o \textbf{features} del problema, e generano dataset parziali di dimensioni sempre minori e che rispettano le condizioni applicate fino al quel punto. Al termine del procedimento si ottengono una serie di nodi foglia che permetteranno di dare un valore della variabile obiettivo, o \textbf{label}. \\
+L'interpretazione della struttura cambia a seconda del tipo di problema in esame: per un problema di \textbf{classificazione} i nodi foglia determineranno le diverse classi in cui il dato può essere smistato, mentre per un problema di \textbf{regressione} permetteranno di determinare un valore nel dominio continuo della variabile oggetto della predizione.\\
+L'algoritmo è di tipo \textit{top-down}, in quanto la scelta della logica di partizionamento viene effettuata a ogni livello prendendo quello migliore tra i candidati attuali. La selezione del criterio da seguire è fondamentale in termini di prestazioni e viene effettuata tra due alternative principali.
+
+\subsubsection{Information Gain}
+Si basa sul concetto di entropia derivante dalla teoria dell'informazione. In particola la variazione di entropia viene definita come:
+\[ \mathbf{H(S) = -\sum_{i=1}^Np_{i}ln_{2}(p_{i}) } \]
+dove $p_{i}$ sono le probabilità di ogni classe di verificarsi applicando una partizione all'albero.\\
+Da questo ricaviamo la definizione di information gain:
+\[ \mathbf{Gain(Parent,Children) = H(Parent)-H(Parent|Children) } \]
+ovvero la variazione di entropia ottenuta applicando una partizione che genererebbe i nodi \textit{Children}.\\\\
+Questa misura risulta particolarmente efficace in quanto le partizioni con il valore maggiore saranno quelle con più bilanciate tra le relative classi e quelle con il minor numero di classi ottenute, seguendo un criterio di progressiva raffinazione.
+
+\subsubsection{Gini Impurity}
+È una misura di quanto è probabile che un elemento scelto a caso dal dataset e etichettato secondo la distribuzione delle \textit{labels} attuale venga classificato erroneamente.\\
+Il coefficiente di un insieme di \textbf{N} classi, ciascuna con la relativa frequenza $\mathit{p_{i}}$, è calcolato come:
+\[ \mathbf{GiniImpurity(p) = 1-\sum_{i=1}^Np_{i}^2 } \]
+
+\subsection{Limitazioni}
+Sebbene i vantaggi derivati dall'utilizzo di questo modello siano molteplici, non sono da sottovalutare le limitazioni che esso ci pone. Oltre alla già accennata minore accuratezza rispetto ad altri approcci, bisogna tenere conto che gli alberi sono estremamente suscettibili a cambiamenti dei dati, con una piccola modifica nella fase di training che può avere inaspettate ripercussioni sulla predizione finale.\\\\
+Sono, inoltre, molto inclini al fenomeno dell'\textbf{overfitting}, ovvero un'erronea generalizzazione del dato dovuta all'eccessiva complessita della funzione descrittrice adottata. Soluzione a questo problema è l'adozione di tecniche di \textbf{pruning}, con cui viene limitata la profondità dell'albero per evitare che modelli eccessivamente il dataset, o l'utilizzo di modelli derivati dagli alberi decisionali, quali le \textbf{Random Forests}, che risultano più resistenti al problema.
+
+\pagebreak
+
+\section{Random Forests}
+Le Random Forest rientrano nella classe dei modelli d'insieme (\textbf{ensemble learning}), più precisamente relativi agli alberi decisionali. Utilizzano, infatti, molteplici alberi parziali e a cui viene applicata una certa dose di casualità. Questo approccio permette di combattere le debolezze proprie del modello Decision Tree, aumentandone la robustezza all'overfitting e riducendo la varianza del risultato.
+
+\subsubsection{Struttura}
+Come può ispirare il nome, le foreste casuali consistono in un insieme di alberi costruiti su una partizione minore del dataset, sia in termini di elementi che di \textit{features}.\\
+Una volta selezionato il campione su cui lavorare l'algoritmo per la costruzione del singolo albero segue il processo mostrato in precedenza, con la sola differenza gli alberi vengono fatti crescere senza limite di profondità. Ovviamente questo è un parametro del modello e, in quanto tale, può essere specificato qualora il dataset presenti comunque problemi di \textit{overfitting} nonostante il nuovo approccio.\\
+Al termine della fase di addestramento il modello rappresenterà un insieme di classificatori/regressori, ciascuno dei quali contribuirà alla soluzione del problema di previsione posto.
+
+\subsubsection{Funzionamento}
+Ogni albero che compone la Random Forest viene costruito a partire da una partizione casuale dell'intero dataset. Questo procedimento viene definito \textbf{bootstrapping} e consiste in un campionamento con sostituzione applicato al dato su cui viene addestrato il modello. Questo comporta una riduzione della varianza della predizione $\mathit{\sigma^2}$, in quanto con \textit{k} predizioni indipendenti e identicamente distribuite otteniamo: 
+\[ \mathbf{mean(\sigma^2)} = \frac{\sigma^2}{k} \]
+Di conseguenza applicando un numero sufficiente di predittori, e implicitamente di campioni di bootstrap, abbiamo a che fare con una varianza significativamente minore rispetto al caso con dataset unico.\\\\
+Con un approccio simile, per ogni albero viene selezionata un sottoinsieme casuale delle \textit{features} del problema, tecnica defnita \textbf{feature bootstrapping}, per aumentare ulteriormente il livello di randomizzazione dell'algoritmo. Questo per evitare che alcune variabili preponderanti polarizzino la costruzione degli alberi, riducendo di fatto l'efficacia della tecnica di bootstrapping appena presentata. Solitamente per ogni albero vengono selezionate $\mathit{\sqrt{n}}$ features, dove \textit{n} è il numero totale, ma possono essere specificate anche altre logiche di partizionamento.\\\\
+Una volta costruiti gli alberi secondo i criteri appena specificati, la predizione viene effettuata utilizzando gli esiti restituiti dai singoli predittori, ciascuno preso indipendentemente. Nel caso della classificazione viene considerata la moda delle classi scelte, mentre per la regressione andiamo a vedere la media dei risultati ottenuti.
